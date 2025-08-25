@@ -75,6 +75,65 @@ with right:
             st.info("Reflection PASSED; no revision needed.")
         st.json(st.session_state["story"])
 
+    if st.button("Run All (Plan → Tools → Draft → Reflect → Create)"):
+        import time
+        try:
+            t0 = time.perf_counter()
+
+            # Plan
+            st.session_state.plan = plan(ticket_text, area, tags)
+
+            # Tools
+            ss = load_similar(tickets_csv)
+            st.session_state.similars = ss.topk(title + " " + body, k=3)
+            st.session_state.metrics = summarize_metrics(metrics_csv, feature=area)
+
+            # Draft
+            t1 = time.perf_counter()
+            st.session_state.story = draft(
+                ticket_text,
+                st.session_state.get("similars", []),
+                st.session_state.get("metrics", {}),
+                style
+            )
+            t2 = time.perf_counter()
+
+            # Reflect + optional Revise
+            ref = reflect(st.session_state["story"], rubric)
+            if ref.get("status") == "FAIL":
+                st.session_state["story"] = revise(
+                    st.session_state["story"],
+                    ref.get("revisions", "")
+                )
+
+            # Create issue
+            validated = validate_story(st.session_state["story"])
+            ac_lines = "\n".join([f"- [ ] {ac}" for ac in validated.acceptance_criteria])
+            body_md = f"""### User Story
+{validated.user_story}
+
+### Acceptance Criteria
+{ac_lines}
+
+### Notes
+- Estimate: {validated.estimate_points}
+- Labels: {", ".join([l for l in validated.labels])}
+"""
+            url = create_issue(
+                validated.story_title,
+                body_md,
+                labels=labels + validated.labels
+            )
+
+            from app.log import log_run
+            log_run(title, (t1 - t0) * 1000, (t2 - t1) * 1000, ref.get("status", "PASS"), url)
+
+            st.success(f"Issue created: {url}")
+            st.write(url)
+
+        except Exception as e:
+            st.error(f"Auto run failed: {e}")
+
     if st.button("7) Create GitHub Issue"):
         validated = validate_story(st.session_state["story"])
         ac_lines = "\n".join([f"- [ ] {ac}" for ac in validated.acceptance_criteria])

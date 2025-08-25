@@ -6,15 +6,23 @@ PLAN_SYS = {"role":"system","content":"You are a senior PM agent. When asked to 
 DRAFT_SYS = {"role":"system","content":"You are a senior PM. Return ONLY story JSON matching schema: {story_title,user_story,acceptance_criteria[],labels[],estimate_points}."}
 REFLECT_SYS = {"role":"system","content":"You are a strict reviewer. Return ONLY JSON. If pass: {\"status\":\"PASS\"}. If fail: {\"status\":\"FAIL\",\"revisions\":\"...\"}."}
 
+import re
+def redact(text:str) -> str:
+    text = re.sub(r'\b[\w\.-]+@[\w\.-]+\.\w{2,}\b', '[redacted-email]', text)
+    text = re.sub(r'\+?\d[\d\-\s\(\)]{8,}\d', '[redacted-phone]', text)
+    return text
+
+
 def read_text(p: str) -> str:
     return pathlib.Path(p).read_text(encoding="utf-8")
 
 def plan(ticket_text:str, area:str, tags:str):
-    user = {"role":"user","content": f"Ticket:\n{ticket_text}\nArea:{area}\nTags:{tags}\nTools available:\n- similar_search(query)\n- summarize_metrics(feature)\nReturn JSON."}
+    user = {"role":"user","content": f"Ticket:\n{redact(ticket_text)}\nArea:{area}\nTags:{tags}\nTools available:\n- similar_search(query)\n- summarize_metrics(feature)\nReturn JSON."}
+    
     return llm_json([PLAN_SYS, user])
 
 def draft(ticket_text:str, similars, metrics, style:str):
-    user = {"role":"user","content": json.dumps({"instruction":"Create INVEST story JSON.","ticket": ticket_text,"tool_outputs": {"similars":similars, "metrics":metrics},"style_guide": style})}
+    user = {"role":"user","content": json.dumps({"instruction":"Create INVEST story JSON.","ticket": redact(ticket_text),"tool_outputs": {"similars":similars, "metrics":metrics},"style_guide": style})}
     return llm_json([DRAFT_SYS, user])
 
 def reflect(story_json:dict, rubric:str):
