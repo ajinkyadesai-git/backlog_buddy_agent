@@ -1,0 +1,4 @@
+ticket_id,title,body,area,tags
+T-101,Export fails for large CSV,"User reports export timing out beyond 50k rows",Analytics,"export,performance"
+T-102,Mobile login 2FA intermittently broken,"Android users see code expired errors",Auth,"android,2fa,login"
+T-103,Add bulk edit for labels,"Power users want to edit labels across 100+ items",Productivity,"labels,bulk-edit"
