@@ -10,3 +10,5 @@ __pycache__/
 .streamlit/
 runs.csv
 .env
+.env
+.env
