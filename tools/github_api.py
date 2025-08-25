@@ -1,6 +1,8 @@
 import os, requests
 from dotenv import load_dotenv
-load_dotenv()
+
+# Load .env and override any stale variables from the shell
+load_dotenv(override=True)
 
 def _cfg():
     token = os.getenv("GITHUB_TOKEN")
@@ -22,7 +24,11 @@ def ensure_labels(names):
     existing = {lbl["name"].lower() for lbl in r.json()}
     for n in names:
         if n and n.strip().lower() not in existing:
-            requests.post(f"{base}/labels", json={"name": n.strip(), "color": "0ea5e9"}, headers=head).raise_for_status()
+            requests.post(
+                f"{base}/labels",
+                json={"name": n.strip(), "color": "0ea5e9"},
+                headers=head
+            ).raise_for_status()
 
 def create_issue(title, body, labels=None, assignees=None):
     base, head = _cfg()
